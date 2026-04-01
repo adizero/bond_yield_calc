@@ -316,7 +316,7 @@ class BondRepl(cmd.Cmd):
         "Type 'calc' with options to compute, 'help' for commands, 'quit' to exit.\n"
         "Example: calc -p 2025-01-15 -a 980 -n 10 -m 2026-01-15 -s 995\n"
     )
-    prompt = f"{BOLD}bond>{RESET} " if USE_COLOR else "bond> "
+    prompt = f"\001{BOLD}\002bond>\001{RESET}\002 " if USE_COLOR else "bond> "
 
     REPL_COMMANDS = ["calc", "help", "quit", "exit"]
 
