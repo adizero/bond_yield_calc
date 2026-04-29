@@ -5,6 +5,7 @@
 
 import argparse
 import cmd
+import math
 import os
 import readline
 import shlex
@@ -171,6 +172,15 @@ def calculate(args):
     annual_amount_per_bond = gain_per_bond_at_maturity * (365.0 / days_to_maturity)
     annual_amount_total = annual_amount_per_bond * num_bonds
 
+    # --- Compounding yields ---
+    total_return = face / purchase_price
+    years_to_maturity = days_to_maturity / 365.0
+    compound_annual_pct = (total_return ** (1.0 / years_to_maturity) - 1) * 100.0
+    compound_semi_pct = 2.0 * (total_return ** (1.0 / (2.0 * years_to_maturity)) - 1) * 100.0
+    compound_quarterly_pct = 4.0 * (total_return ** (1.0 / (4.0 * years_to_maturity)) - 1) * 100.0
+    compound_monthly_pct = 12.0 * (total_return ** (1.0 / (12.0 * years_to_maturity)) - 1) * 100.0
+    compound_continuous_pct = (math.log(total_return) / years_to_maturity) * 100.0
+
     # --- Expected yield from purchase to sell date (pro-rated maturity gain) ---
     expected_gain_per_bond = gain_per_bond_at_maturity * (days_held / days_to_maturity) if days_to_maturity > 0 else 0
     expected_yield_pct = (expected_gain_per_bond / purchase_price) * 100.0 if days_held > 0 else 0
@@ -201,6 +211,11 @@ def calculate(args):
         "annual_yield_pct": annual_yield_pct,
         "annual_amount_per_bond": annual_amount_per_bond,
         "annual_amount_total": annual_amount_total,
+        "compound_annual_pct": compound_annual_pct,
+        "compound_semi_pct": compound_semi_pct,
+        "compound_quarterly_pct": compound_quarterly_pct,
+        "compound_monthly_pct": compound_monthly_pct,
+        "compound_continuous_pct": compound_continuous_pct,
         "expected_yield_pct": expected_yield_pct,
         "expected_gain_per_bond": expected_gain_per_bond,
         "expected_amount_total": expected_amount_total,
@@ -280,11 +295,20 @@ def print_results(args, r):
     row_total("Total sell price:", fmt(r['total_sell']))
     print(sep)
 
-    print(f"\n  ANNUAL YIELD (annualized, if held to maturity)")
+    print(f"\n  ANNUAL YIELD (simple, if held to maturity)")
     print(sep)
     row("Yield:", f"{r['annual_yield_pct']:.4f}%")
     row("Amount per bond:", f"{fmt(r['annual_amount_per_bond'])} / year")
     row_total(total_label, f"{fmt(r['annual_amount_total'])} / year")
+    print(sep)
+
+    print(f"\n  COMPOUNDING YIELD (annualized, if held to maturity)")
+    print(sep)
+    row("Annual:", f"{r['compound_annual_pct']:.4f}%")
+    row("Semi-annual:", f"{r['compound_semi_pct']:.4f}%")
+    row("Quarterly:", f"{r['compound_quarterly_pct']:.4f}%")
+    row("Monthly:", f"{r['compound_monthly_pct']:.4f}%")
+    row("Continuous:", f"{r['compound_continuous_pct']:.4f}%")
     print(sep)
 
     print(f"\n  EXPECTED YIELD (pro-rated to sell date, {r['days_held']} days)")
