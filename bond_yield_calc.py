@@ -58,10 +58,12 @@ CALC_OPTIONS = [
     "-p", "--purchase-date",
     "-a", "--purchase-price",
     "-A", "--purchase-price-total",
+    "-b", "--purchase-price-bond",
     "-n", "--bonds",
     "-m", "--maturity-date",
     "-s", "--sell-price",
     "-S", "--sell-price-total",
+    "-B", "--sell-price-bond",
     "-d", "--sell-date",
     "--face-value",
 ]
@@ -77,6 +79,7 @@ def build_calc_parser(repl_mode=False):
 examples:
   %(prog)s -p 2025-01-15 -a 980 -n 10 -m 2026-01-15 -s 995
   %(prog)s -p 2025-01-15 -A 9800 -n 10 -m 2026-01-15 -S 9950
+  %(prog)s -p 2025-01-15 -b 98.00 -n 10 -m 2026-01-15 -B 99.50
   %(prog)s -p 2025-01-15 -a 980 -n 10 -m 2026-01-15 -s 995 -d 2025-07-15
 """,
     )
@@ -91,6 +94,10 @@ examples:
     parser.add_argument(
         "-A", "--purchase-price-total", type=parse_number,
         help="Total purchase price for all bonds (divided by number of bonds)",
+    )
+    parser.add_argument(
+        "-b", "--purchase-price-bond", type=parse_number,
+        help="Purchase price per $100 face value (brokerage quote, e.g. 97.50)",
     )
     parser.add_argument(
         "-n", "--bonds", type=parse_int_number, required=True,
@@ -109,6 +116,10 @@ examples:
         help="Total sell price for all bonds (divided by number of bonds)",
     )
     parser.add_argument(
+        "-B", "--sell-price-bond", type=parse_number,
+        help="Sell price per $100 face value (brokerage quote, e.g. 99.50)",
+    )
+    parser.add_argument(
         "-d", "--sell-date", type=parse_date, default=date.today(),
         help="Bond sell date (YYYY-MM-DD, defaults to today)",
     )
@@ -120,19 +131,26 @@ examples:
 
 
 def validate_args(args, parser):
-    if args.purchase_price and args.purchase_price_total:
-        parser.error("Use either --purchase-price (-a) or --purchase-price-total (-A), not both")
-    if not args.purchase_price and not args.purchase_price_total:
-        parser.error("Either --purchase-price (-a) or --purchase-price-total (-A) is required")
-    if args.sell_price and args.sell_price_total:
-        parser.error("Use either --sell-price (-s) or --sell-price-total (-S), not both")
-    if not args.sell_price and not args.sell_price_total:
-        parser.error("Either --sell-price (-s) or --sell-price-total (-S) is required")
+    purchase_opts = [o for o in (args.purchase_price, args.purchase_price_total, args.purchase_price_bond) if o]
+    if len(purchase_opts) > 1:
+        parser.error("Use only one of --purchase-price (-a), --purchase-price-total (-A), or --purchase-price-bond (-b)")
+    if len(purchase_opts) == 0:
+        parser.error("One of --purchase-price (-a), --purchase-price-total (-A), or --purchase-price-bond (-b) is required")
+
+    sell_opts = [o for o in (args.sell_price, args.sell_price_total, args.sell_price_bond) if o]
+    if len(sell_opts) > 1:
+        parser.error("Use only one of --sell-price (-s), --sell-price-total (-S), or --sell-price-bond (-B)")
+    if len(sell_opts) == 0:
+        parser.error("One of --sell-price (-s), --sell-price-total (-S), or --sell-price-bond (-B) is required")
 
     if args.purchase_price_total:
         args.purchase_price = args.purchase_price_total / args.bonds
+    if args.purchase_price_bond:
+        args.purchase_price = args.purchase_price_bond * (args.face_value / 100.0)
     if args.sell_price_total:
         args.sell_price = args.sell_price_total / args.bonds
+    if args.sell_price_bond:
+        args.sell_price = args.sell_price_bond * (args.face_value / 100.0)
 
     if args.purchase_date >= args.maturity_date:
         parser.error("Purchase date must be before maturity date")
